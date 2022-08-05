@@ -3,6 +3,7 @@ package com.example.reggie.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.example.reggie.DTO.DishDto;
 import com.example.reggie.DTO.SetmealDto;
 import com.example.reggie.common.R;
 import com.example.reggie.mapper.SetmealMapper;
@@ -16,6 +17,9 @@ import com.example.reggie.service.ISetmealService;
 import com.example.reggie.service.ISetmealdishService;
 import org.apache.ibatis.jdbc.Null;
 import org.springframework.beans.BeanUtils;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -23,6 +27,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import javax.annotation.Resource;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
+
 @Transactional
 @Service
 public class SetmealServiceImpl extends ServiceImpl<SetmealMapper, Setmeal> implements ISetmealService {
@@ -34,6 +40,7 @@ public class SetmealServiceImpl extends ServiceImpl<SetmealMapper, Setmeal> impl
     private IDishService dishService;
     @Override
     @Transactional
+    @CacheEvict(value = "setmealCache",allEntries = true)
     public R saveSetmeal(SetmealDto setmealDto) {
         save(setmealDto);
         List<SetmealDish> setmealDishes = setmealDto.getSetmealDishes();
@@ -43,6 +50,7 @@ public class SetmealServiceImpl extends ServiceImpl<SetmealMapper, Setmeal> impl
                 setmealDishList.add(setmealDish);
         }
         setmealdishService.saveBatch(setmealDishList);
+
         return R.success("添加成功");
     }
 
@@ -71,6 +79,7 @@ public class SetmealServiceImpl extends ServiceImpl<SetmealMapper, Setmeal> impl
     }
 
     @Override
+    @CacheEvict(value = "setmealCache",allEntries = true)
     public R deleteById(Long[] ids) {
         for (int i=0;i<ids.length;i++){
                 removeById(ids[i]);
@@ -80,21 +89,10 @@ public class SetmealServiceImpl extends ServiceImpl<SetmealMapper, Setmeal> impl
     }
 
     @Override
+    @CacheEvict(value = "setmealCache",allEntries = true)
     public R stopBatchSell(Integer status, Long[] ids) {
-        if(status==1){
-            for (int i=0;i<ids.length;i++){
-                Dish dish = dishService.getById(setmealdishService.getById(ids[i]).getDishId());
-                Integer dishStatus = dish.getStatus();
-                if (dishStatus==1){
-                    update().setSql("status=" + status).eq("id", ids[i]).update();
-                }else {
-                    return R.error("套餐里的菜品不能有禁售");
-                }
-            }
-            return R.success("批量修改成功！");
-        }
-        for (int i=0;i<ids.length;i++){
-            update().setSql("status=" + status).eq("id", ids[i]).update();
+        for (int i = 0; i < ids.length; i++) {
+                update().setSql("status=" + status).eq("id", ids[i]).update();
         }
         return R.success("批量修改成功！");
     }
@@ -110,6 +108,7 @@ public class SetmealServiceImpl extends ServiceImpl<SetmealMapper, Setmeal> impl
     }
 
     @Override
+    @CacheEvict(value = "setmealCache",allEntries = true)
     public R Update(SetmealDto setmealDto) {
         updateById(setmealDto);
         List<SetmealDish> setmealDishes = setmealDto.getSetmealDishes();
@@ -119,10 +118,12 @@ public class SetmealServiceImpl extends ServiceImpl<SetmealMapper, Setmeal> impl
             setmealDishList.add(setmealDish);
         }
         setmealdishService.updateBatchById(setmealDishList);
+
         return R.success("修改菜品成功");
     }
 
     @Override
+    @Cacheable(value = "setmealCache",key = "#setmeal.categoryId+'_'+#setmeal.status")
     public R setmealList( Setmeal setmeal) {
         QueryWrapper<Setmeal> queryWrapper=new QueryWrapper<>();
         if (setmeal!=null){

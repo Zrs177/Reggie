@@ -58,22 +58,22 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders> impleme
         if (shoppingCarts == null || shoppingCarts.size() == 0) {
             return R.error("购物车不能为空");
         }
-//
-//        for(ShoppingCart shoppingCart:shoppingCarts){
-//            if (shoppingCart.getDishId()!=null){
-//                Integer status = dishService.getById(shoppingCart.getDishId()).getStatus();
-//                if (status!=1){
-//                    shoppingCartService.remove(wrapper);
-//                    return R.error("商品已下架");
-//                }
-//            }else {
-//                Integer status = setmealService.getById(shoppingCart.getSetmealId()).getStatus();
-//                if (status!=1){
-//                    shoppingCartService.remove(wrapper);
-//                    return R.error("商品已下架");
-//                }
-//            }
-//        }
+
+        for(ShoppingCart shoppingCart:shoppingCarts){
+            if (shoppingCart.getDishId()!=null){
+                Integer status = dishService.getById(shoppingCart.getDishId()).getStatus();
+                if (status!=1){
+                    shoppingCartService.remove(wrapper);
+                    return R.error("商品已下架");
+                }
+            }else {
+                Integer status = setmealService.getById(shoppingCart.getSetmealId()).getStatus();
+                if (status!=1){
+                    shoppingCartService.remove(wrapper);
+                    return R.error("商品已下架");
+                }
+            }
+        }
 
         //查询用户数据
         User user = userService.getById(userId);

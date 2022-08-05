@@ -68,6 +68,11 @@ public class DishServiceImpl extends ServiceImpl<DishMapper, Dish> implements ID
                 removeById(ids[i]);
                 dishFlavorService.removeById(ids[i]);
             }
+            List<Dish> dishes = listByIds(Arrays.asList(ids));
+            for (Dish dish:dishes){
+                String key="dish_"+dish.getCategoryId()+"_1";
+                redisTemplate.delete(key);
+            }
             return R.success("删除成功");
         }
         return R.error("删除失败");
